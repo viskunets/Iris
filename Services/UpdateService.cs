@@ -2,15 +2,14 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using System.Reflection;
 
 namespace EstimateApp.Services;
 
 public class UpdateService
 {
-    // Сюди ви потім пропишете посилання на ваш файл з версією
-    private const string VersionUrl = "https://your-server.com/estimate_app/version.txt";
-    private const string DownloadUrl = "https://your-server.com/estimate_app/EstimateApp.exe";
+    // Реальні посилання на ваш GitHub (viskunets/Iris)
+    private const string VersionUrl = "https://raw.githubusercontent.com/viskunets/Iris/master/version.txt";
+    private const string DownloadUrl = "https://github.com/viskunets/Iris/releases/latest";
 
     public string CurrentVersion => "4.5.0";
 
@@ -19,7 +18,6 @@ public class UpdateService
         try
         {
             using var client = new HttpClient();
-            // Встановлюємо таймаут, щоб програма не зависла, якщо немає інтернету
             client.Timeout = TimeSpan.FromSeconds(5);
             
             var latestVersionStr = await client.GetStringAsync(VersionUrl);
@@ -33,14 +31,13 @@ public class UpdateService
         }
         catch
         {
-            // Якщо сервера немає або інтернету - просто кажемо, що оновлень немає
+            // Помилка зазвичай означає відсутність інтернету або приватний репозиторій
         }
         return (false, CurrentVersion);
     }
 
     public void OpenDownloadPage()
     {
-        // Відкриваємо посилання на завантаження в браузері
         Process.Start(new ProcessStartInfo
         {
             FileName = DownloadUrl,

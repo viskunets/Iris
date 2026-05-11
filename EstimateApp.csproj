@@ -13,6 +13,7 @@
     <Authors>Viskunets Vladyslav</Authors>
     <Description>Професійна система розрахунку кошторисів.</Description>
     <Version>4.5.1</Version>
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

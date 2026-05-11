@@ -15,8 +15,7 @@
         MinWidth="1000" MinHeight="600"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
-        FontFamily="{md:MaterialDesignFont}"
-        WindowStartupLocation="CenterScreen">
+        FontFamily="{md:MaterialDesignFont}">
 
     <Window.DataContext>
         <vm:MainViewModel />

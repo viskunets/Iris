@@ -68,4 +68,3 @@ del ""%~f0""
         Environment.Exit(0);
     }
 }
-" ,Description:

@@ -1,0 +1,224 @@
+<Window x:Class="EstimateApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:vm="clr-namespace:EstimateApp.ViewModels"
+        xmlns:conv="clr-namespace:EstimateApp.Converters"
+        mc:Ignorable="d"
+        Title="СИСТЕМА РОЗРАХУНКУ v4.5" Height="900" Width="1400"
+        Background="{DynamicResource MaterialDesignPaper}"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        FontFamily="{md:MaterialDesignFont}"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.DataContext>
+        <vm:MainViewModel />
+    </Window.DataContext>
+
+    <Window.Resources>
+        <conv:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        
+        <Style x:Key="RowHighlightStyle" TargetType="DataGridRow">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="Background" Value="#1A2196F3"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <md:DialogHost CloseOnClickAway="False" Identifier="RootDialog" IsOpen="{Binding IsDialogOpen}">
+        <md:DialogHost.DialogContent>
+            <Grid Margin="24" Width="400">
+                <!-- STATE 1: SAVE CONFIRMATION -->
+                <StackPanel Visibility="{Binding DialogState, Converter={StaticResource IntToVis}, ConverterParameter=1}">
+                    <md:PackIcon Kind="HelpCircleOutline" Width="48" Height="48" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignPrimaryBrush}"/>
+                    <TextBlock Text="ЗБЕРЕЖЕННЯ" Style="{StaticResource MaterialDesignHeadline6TextBlock}" HorizontalAlignment="Center" Margin="0,16,0,8"/>
+                    <TextBlock Text="Зберегти поточний проект в історію перед очищенням?" TextWrapping="Wrap" TextAlignment="Center" Margin="0,0,0,24"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="ТАК" Command="{Binding SaveAndContinueCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Width="80" Margin="0,0,8,0"/>
+                        <Button Content="НІ" Command="{Binding SkipSaveAndContinueCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="80" Margin="0,0,8,0"/>
+                        <Button Content="СКАСУВАТИ" Command="{x:Static md:DialogHost.CloseDialogCommand}" Style="{StaticResource MaterialDesignFlatButton}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- STATE 0: NEW PROJECT NAME -->
+                <StackPanel Visibility="{Binding DialogState, Converter={StaticResource IntToVis}, ConverterParameter=0}">
+                    <md:PackIcon Kind="FilePlus" Width="48" Height="48" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignPrimaryBrush}"/>
+                    <TextBlock Text="НОВИЙ ПРОЕКТ" Style="{StaticResource MaterialDesignHeadline6TextBlock}" HorizontalAlignment="Center" Margin="0,16,0,16"/>
+                    <TextBox Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}" md:HintAssist.Hint="Назва проекту" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,24"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="СКАСУВАТИ" Command="{x:Static md:DialogHost.CloseDialogCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,8,0"/>
+                        <Button Content="СТВОРИТИ" Command="{Binding ConfirmNewProjectCommand}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </md:DialogHost.DialogContent>
+
+        <md:DrawerHost IsLeftDrawerOpen="{Binding IsMenuOpen}">
+            <md:DrawerHost.LeftDrawerContent>
+                <DockPanel MinWidth="250">
+                    <md:ColorZone Mode="PrimaryMid" Background="{Binding HeaderColor, Converter={StaticResource ColorToBrushConverter}}" DockPanel.Dock="Top" Height="150">
+                        <StackPanel VerticalAlignment="Center" Margin="20">
+                            <md:PackIcon Kind="Calculator" Width="48" Height="48" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Система розрахунку" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </md:ColorZone>
+                    <ListBox Margin="0,10,0,0" SelectedIndex="{Binding SelectedTabIndex}">
+                        <ListBoxItem Padding="16"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="FileEdit" Margin="0,0,16,0"/><TextBlock Text="Розрахунок"/></StackPanel></ListBoxItem>
+                        <ListBoxItem Padding="16"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="Database" Margin="0,0,16,0"/><TextBlock Text="База Даних"/></StackPanel></ListBoxItem>
+                        <ListBoxItem Padding="16"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="History" Margin="0,0,16,0"/><TextBlock Text="Історія"/></StackPanel></ListBoxItem>
+                        <ListBoxItem Padding="16"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="Settings" Margin="0,0,16,0"/><TextBlock Text="Налаштування"/></StackPanel></ListBoxItem>
+                    </ListBox>
+                </DockPanel>
+            </md:DrawerHost.LeftDrawerContent>
+
+            <Grid>
+                <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+
+                <md:ColorZone Mode="PrimaryMid" Background="{Binding HeaderColor, Converter={StaticResource ColorToBrushConverter}}" Padding="8" md:ElevationAssist.Elevation="Dp4">
+                    <DockPanel>
+                        <ToggleButton Style="{StaticResource MaterialDesignHamburgerToggleButton}" IsChecked="{Binding IsMenuOpen}"/>
+                        <md:PackIcon Kind="HardHat" Width="24" Height="24" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                        <TextBlock Text="СИСТЕМА РОЗРАХУНКУ v4.5" VerticalAlignment="Center" FontSize="18" FontWeight="SemiBold"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Command="{Binding StartNewProjectFlowCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White">
+                                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="FilePlusOutline" Margin="0,0,8,0"/><TextBlock Text="НОВИЙ ПРОЕКТ"/></StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+                </md:ColorZone>
+
+                <TabControl Grid.Row="1" SelectedIndex="{Binding SelectedTabIndex}" BorderThickness="0">
+                    <TabControl.ItemContainerStyle><Style TargetType="TabItem"><Setter Property="Visibility" Value="Collapsed"/></Style></TabControl.ItemContainerStyle>
+
+                    <!-- TAB 0: CALCULATION -->
+                    <TabItem>
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                            <StackPanel Margin="0,0,0,20">
+                                <TextBlock Text="Складання розрахунку" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="400"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                    <md:Card Padding="15,5"><TextBox Text="{Binding CalculationName}" md:HintAssist.Hint="Назва проекту" Style="{StaticResource MaterialDesignFloatingHintTextBox}" FontSize="16" BorderThickness="0"/></md:Card>
+                                    <md:Card Grid.Column="1" Margin="20,0,0,0" Width="350" HorizontalAlignment="Left" Padding="10,0">
+                                        <Grid><TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" md:HintAssist.Hint="Пошук..." BorderThickness="0" VerticalAlignment="Center" FontSize="16"/><Button Command="{Binding ResetSearchCommand}" Style="{StaticResource MaterialDesignFlatButton}" HorizontalAlignment="Right" Width="30" Height="30"><md:PackIcon Kind="Close"/></Button></Grid>
+                                    </md:Card>
+                                </Grid>
+                            </StackPanel>
+
+                            <md:Card Grid.Row="1" md:ElevationAssist.Elevation="Dp2">
+                                <DataGrid ItemsSource="{Binding CatalogView}" AutoGenerateColumns="False" CanUserAddRows="False" BorderThickness="0" RowStyle="{StaticResource RowHighlightStyle}" VerticalScrollBarVisibility="Auto">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="Вибір" Binding="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}" Width="60"/>
+                                        <DataGridTextColumn Header="Категорія" Binding="{Binding Category}" Width="150" IsReadOnly="True"/>
+                                        <DataGridTextColumn Header="Найменування" Binding="{Binding Name}" Width="*" IsReadOnly="True"/>
+                                        <DataGridCheckBoxColumn Header="ПДВ" Binding="{Binding IncludeVat, UpdateSourceTrigger=PropertyChanged}" Width="60"/>
+                                        <DataGridTextColumn Header="Ціна" Binding="{Binding Price, UpdateSourceTrigger=PropertyChanged}" Width="130"/>
+                                        <DataGridTextColumn Header="К-сть" Binding="{Binding Factor, UpdateSourceTrigger=PropertyChanged}" Width="80"/>
+                                        <DataGridTextColumn Header="Всього" Binding="{Binding Total, StringFormat=N2}" IsReadOnly="True" Width="130">
+                                            <DataGridTextColumn.ElementStyle><Style TargetType="TextBlock"><Setter Property="HorizontalAlignment" Value="Right"/><Setter Property="FontWeight" Value="Bold"/></Style></DataGridTextColumn.ElementStyle>
+                                        </DataGridTextColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </md:Card>
+
+                            <md:ColorZone Grid.Row="2" Mode="SecondaryMid" Background="{Binding FooterColor, Converter={StaticResource ColorToBrushConverter}}" Padding="20" Margin="0,20,0,0" CornerRadius="12">
+                                <Grid>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding SaveEstimateCommand}" Background="#4CAF50" BorderBrush="#4CAF50" Margin="0,0,10,0"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="ContentSave" Margin="0,0,8,0"/><TextBlock Text="ЗБЕРЕГТИ В ІСТОРІЮ"/></StackPanel></Button>
+                                        <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding ExportPdfCommand}" Margin="0,0,10,0"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="FilePdfBox" Margin="0,0,8,0"/><TextBlock Text="PDF"/></StackPanel></Button>
+                                        <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding ExportExcelCommand}" Background="#217346" BorderBrush="#217346"><StackPanel Orientation="Horizontal"><md:PackIcon Kind="FileExcel" Margin="0,0,8,0"/><TextBlock Text="EXCEL"/></StackPanel></Button>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <TextBlock Text="ВИБРАНО РАЗОМ:" VerticalAlignment="Center" Margin="0,0,15,0" Opacity="0.8" Foreground="White"/>
+                                        <TextBlock Text="{Binding GrandTotal, StringFormat='{}{0:N2} грн'}" FontSize="32" FontWeight="Black" Foreground="White"/>
+                                    </StackPanel>
+                                </Grid>
+                            </md:ColorZone>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- TAB 1: DATABASE -->
+                    <TabItem>
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                                <TextBlock Text="База Даних" Style="{StaticResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center"/>
+                                <Button Command="{Binding AddToCatalogCommand}" Style="{StaticResource MaterialDesignFloatingActionButton}" Width="45" Height="45" Margin="20,0,0,0" Padding="0">
+                                    <md:PackIcon Kind="Plus" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                            <md:Card Grid.Row="1" md:ElevationAssist.Elevation="Dp2">
+                                <DataGrid ItemsSource="{Binding Catalog}" AutoGenerateColumns="False" CanUserAddRows="False" BorderThickness="0">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Категорія" Binding="{Binding Category}" Width="150"/>
+                                        <DataGridTextColumn Header="Найменування" Binding="{Binding Name}" Width="*"/>
+                                        <DataGridTextColumn Header="Базова ціна" Binding="{Binding Price}" Width="150"/>
+                                        <DataGridTemplateColumn Width="70">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.RemoveFromCatalogCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}" CommandParameter="{Binding}" Width="40" Height="40" Padding="0">
+                                                        <md:PackIcon Kind="Delete" Foreground="#F44336" Width="24" Height="24"/>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </md:Card>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- TAB 2: HISTORY -->
+                    <TabItem>
+                        <Grid Margin="20">
+                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                            <TextBlock Text="Історія проектів" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,20"/>
+                            <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding History}"><ItemsControl.ItemTemplate><DataTemplate><md:Card Margin="0,0,0,10" Padding="15"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding DataContext.LoadCalculationCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel><TextBlock Text="{Binding Name}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource MaterialDesignPrimaryBrush}"/><TextBlock Text="{Binding Date, StringFormat='{}📅 {0:dd.MM.yyyy}  🕒 {0:HH:mm:ss}'}" FontSize="14" Opacity="0.9" Foreground="{DynamicResource MaterialDesignBody}" Margin="0,4,0,0"/><TextBlock Text="{Binding GrandTotal, StringFormat='{}{0:N2} грн'}" FontSize="18" FontWeight="Black" Margin="0,8,0,0" Foreground="{DynamicResource MaterialDesignBody}"/></StackPanel></Button><StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.ExportHistoryPdfCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"><md:PackIcon Kind="FilePdfBox" Foreground="#F44336" Width="28" Height="28"/></Button><Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.ExportHistoryExcelCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"><md:PackIcon Kind="FileExcel" Foreground="#217346" Width="28" Height="28"/></Button><Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.RemoveHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"><md:PackIcon Kind="Delete" Foreground="#9E9E9E" Width="28" Height="28"/></Button></StackPanel></Grid></md:Card></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- TAB 3: SETTINGS -->
+                    <TabItem>
+                        <Grid Margin="20">
+                            <ScrollViewer><StackPanel MaxWidth="500" HorizontalAlignment="Left">
+                                <TextBlock Text="Налаштування" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,24"/>
+                                <md:Card Padding="24">
+                                    <StackPanel>
+                                        <TextBlock Text="ТЕМА" FontWeight="Bold" Opacity="0.6" Margin="0,0,0,16"/>
+                                        <DockPanel Margin="0,0,0,24"><TextBlock Text="Темний режим" VerticalAlignment="Center"/><ToggleButton IsChecked="{Binding IsDarkTheme}" HorizontalAlignment="Right" Style="{StaticResource MaterialDesignSwitchToggleButton}"/></DockPanel>
+                                        <TextBlock Text="КОЛЬОРИ ІНТЕРФЕЙСУ (HEX)" FontWeight="Bold" Opacity="0.6" Margin="0,8,0,12"/>
+                                        <Grid Margin="0,0,0,16"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions><TextBlock Text="Колір заголовка" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding HeaderColor}" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:TextFieldAssist.PrefixText="#"/></Grid>
+                                        <Grid Margin="0,0,0,24"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions><TextBlock Text="Колір підсумку" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding FooterColor}" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:TextFieldAssist.PrefixText="#"/></Grid>
+                                        <Separator Margin="0,0,0,24"/><TextBlock Text="ПОДАТКИ" FontWeight="Bold" Opacity="0.6" Margin="0,0,0,12"/>
+                                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions><TextBlock Text="Ставка ПДВ (%)" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding VatRatePercent}" Style="{StaticResource MaterialDesignOutlinedTextBox}" HorizontalContentAlignment="Center"/></Grid>
+                                        <Separator Margin="0,24,0,24"/>
+                                        <TextBlock Text="ПРО ПРОГРАМУ" FontWeight="Bold" Opacity="0.6" Margin="0,0,0,12"/>
+                                        <DockPanel>
+                                            <StackPanel>
+                                                <TextBlock Text="Поточна версія:" Opacity="0.6" FontSize="12"/>
+                                                <TextBlock Text="{Binding AppVersion}" FontWeight="Bold" FontSize="16"/>
+                                            </StackPanel>
+                                            <Button Command="{Binding CheckForUpdatesCommand}" Style="{StaticResource MaterialDesignOutlinedButton}" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <md:PackIcon Kind="Update" Margin="0,0,8,0"/>
+                                                    <TextBlock Text="ПЕРЕВІРИТИ ОНОВЛЕННЯ"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </md:Card>
+                            </StackPanel></ScrollViewer>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+
+                <md:Snackbar MessageQueue="{Binding MessageQueue}" Grid.Row="1" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+            </Grid>
+        </md:DrawerHost>
+    </md:DialogHost>
+</Window>

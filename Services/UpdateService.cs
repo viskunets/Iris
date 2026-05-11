@@ -10,7 +10,7 @@ namespace EstimateApp.Services;
 public class UpdateService
 {
     private const string VersionUrl = "https://raw.githubusercontent.com/viskunets/Iris/master/version.txt";
-    private const string DownloadUrl = "https://github.com/viskunets/Iris/releases/latest/download/EstimateApp_Portable.zip";
+    private const string DownloadUrl = "https://github.com/viskunets/Iris/releases/latest/download/Iris.zip";
 
     public string CurrentVersion => "4.5.1";
 

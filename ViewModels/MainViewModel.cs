@@ -46,6 +46,13 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _headerColor = "#2196F3";
     [ObservableProperty] private string _footerColor = "#2196F3";
 
+    // Параметри вікна
+    [ObservableProperty] private double _winWidth;
+    [ObservableProperty] private double _winHeight;
+    [ObservableProperty] private double _winTop;
+    [ObservableProperty] private double _winLeft;
+    [ObservableProperty] private WindowState _winState;
+
     public ObservableCollection<EstimateItem> Catalog { get; } = new();
     public System.ComponentModel.ICollectionView CatalogView { get; }
     public ObservableCollection<SavedCalculation> History { get; } = new();
@@ -66,6 +73,12 @@ public partial class MainViewModel : ObservableObject
         VatRatePercent = data.VatRatePercent;
         IsDarkTheme = data.IsDarkTheme;
         
+        WinWidth = data.WindowWidth;
+        WinHeight = data.WindowHeight;
+        WinTop = data.WindowTop;
+        WinLeft = data.WindowLeft;
+        WinState = data.IsMaximized ? WindowState.Maximized : WindowState.Normal;
+
         foreach (var item in data.Catalog) AddToCatalogInternal(item);
         foreach (var calc in data.History) History.Add(calc);
 
@@ -101,7 +114,12 @@ public partial class MainViewModel : ObservableObject
             HeaderColor = HeaderColor,
             FooterColor = FooterColor,
             VatRatePercent = VatRatePercent,
-            IsDarkTheme = IsDarkTheme
+            IsDarkTheme = IsDarkTheme,
+            WindowWidth = WinWidth,
+            WindowHeight = WinHeight,
+            WindowTop = WinTop,
+            WindowLeft = WinLeft,
+            IsMaximized = WinState == WindowState.Maximized
         };
         _persistenceService.SaveData(data);
     }
@@ -188,13 +206,23 @@ public partial class MainViewModel : ObservableObject
     private async Task CheckForUpdates()
     {
         MessageQueue.Enqueue("Перевірка оновлень...");
-        var (canUpdate, newVersion) = await _updateService.CheckForUpdatesAsync();
-        if (canUpdate)
+        try 
         {
-            var result = MessageBox.Show($"Знайдено нову версію {newVersion}! Завантажити зараз?", "Оновлення", MessageBoxButton.YesNo, MessageBoxImage.Information);
-            if (result == MessageBoxResult.Yes) _updateService.OpenDownloadPage();
+            var (canUpdate, newVersion) = await _updateService.CheckForUpdatesAsync();
+            if (canUpdate)
+            {
+                var result = MessageBox.Show($"Знайдено нову версію {newVersion}! Встановити оновлення зараз?", "Автооновлення", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                if (result == MessageBoxResult.Yes) 
+                {
+                    await _updateService.DownloadAndInstallUpdateAsync(msg => MessageQueue.Enqueue(msg));
+                }
+            }
+            else MessageQueue.Enqueue("У вас найновіша версія!");
         }
-        else MessageQueue.Enqueue("У вас найновіша версія!");
+        catch (Exception ex)
+        {
+            MessageQueue.Enqueue($"Помилка оновлення: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -212,4 +240,10 @@ public partial class MainViewModel : ObservableObject
     partial void OnFooterColorChanged(string value) => SaveAll();
     partial void OnVatRatePercentChanged(decimal value) => SaveAll();
     partial void OnSelectedTabIndexChanged(int value) => IsMenuOpen = false;
+
+    partial void OnWinWidthChanged(double value) => SaveAll();
+    partial void OnWinHeightChanged(double value) => SaveAll();
+    partial void OnWinTopChanged(double value) => SaveAll();
+    partial void OnWinLeftChanged(double value) => SaveAll();
+    partial void OnWinStateChanged(WindowState value) => SaveAll();
 }

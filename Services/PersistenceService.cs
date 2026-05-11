@@ -16,6 +16,11 @@ public class AppData
     public string FooterColor { get; set; } = "#2196F3";
     public decimal VatRatePercent { get; set; } = 20;
     public bool IsDarkTheme { get; set; }
+    public double WindowWidth { get; set; } = 1200;
+    public double WindowHeight { get; set; } = 800;
+    public double WindowTop { get; set; } = 100;
+    public double WindowLeft { get; set; } = 100;
+    public bool IsMaximized { get; set; }
 }
 
 public class PersistenceService

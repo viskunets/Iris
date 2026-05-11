@@ -7,7 +7,7 @@
         xmlns:vm="clr-namespace:EstimateApp.ViewModels"
         xmlns:conv="clr-namespace:EstimateApp.Converters"
         mc:Ignorable="d"
-        Title="СИСТЕМА РОЗРАХУНКУ v4.5" Height="900" Width="1400"
+        Title="Iris v4.5.1 - СИСТЕМА РОЗРАХУНКУ" Height="900" Width="1400"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         FontFamily="{md:MaterialDesignFont}"
@@ -83,7 +83,7 @@
                     <DockPanel>
                         <ToggleButton Style="{StaticResource MaterialDesignHamburgerToggleButton}" IsChecked="{Binding IsMenuOpen}"/>
                         <md:PackIcon Kind="HardHat" Width="24" Height="24" VerticalAlignment="Center" Margin="16,0,8,0"/>
-                        <TextBlock Text="СИСТЕМА РОЗРАХУНКУ v4.5" VerticalAlignment="Center" FontSize="18" FontWeight="SemiBold"/>
+                        <TextBlock Text="Iris v4.5.1" VerticalAlignment="Center" FontSize="18" FontWeight="SemiBold"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Button Command="{Binding StartNewProjectFlowCommand}" Style="{StaticResource MaterialDesignFlatButton}" Foreground="White">
                                 <StackPanel Orientation="Horizontal"><md:PackIcon Kind="FilePlusOutline" Margin="0,0,8,0"/><TextBlock Text="НОВИЙ ПРОЕКТ"/></StackPanel>

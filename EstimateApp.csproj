@@ -4,7 +4,15 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <AssemblyName>Iris</AssemblyName>
+    <Title>Iris - Система Розрахунку</Title>
+    <Company>Viskunets Vladyslav</Company>
+    <Product>Iris</Product>
+    <Authors>Viskunets Vladyslav</Authors>
+    <Description>Професійна система розрахунку кошторисів.</Description>
+    <Version>4.5.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

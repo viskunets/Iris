@@ -11,7 +11,7 @@ public class UpdateService
     private const string VersionUrl = "https://raw.githubusercontent.com/viskunets/Iris/master/version.txt";
     private const string DownloadUrl = "https://github.com/viskunets/Iris/releases/latest";
 
-    public string CurrentVersion => "4.5.0";
+    public string CurrentVersion => "4.5.1";
 
     public async Task<(bool canUpdate, string newVersion)> CheckForUpdatesAsync()
     {

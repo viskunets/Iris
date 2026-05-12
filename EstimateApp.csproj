@@ -24,4 +24,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Resource Include="maxeffectshow.jpg" />
+  </ItemGroup>
+
 </Project>

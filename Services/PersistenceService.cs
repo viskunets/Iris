@@ -38,11 +38,33 @@ public class PersistenceService
 
     public PersistenceService()
     {
-        // Зберігаємо в AppData/Roaming/EstimateApp - це стандартне місце для даних програм
-        _folderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EstimateApp");
+        // Переносимо дані в LocalAppData/Iris для надійності при оновленнях
+        _folderPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Iris");
         _filePath = Path.Combine(_folderPath, "data.json");
         
         if (!Directory.Exists(_folderPath)) Directory.CreateDirectory(_folderPath);
+
+        // МІГРАЦІЯ: Якщо є старий файл у папці з програмою або в Roaming, переносимо його
+        MigrateOldData();
+    }
+
+    private void MigrateOldData()
+    {
+        try
+        {
+            string appDirFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data.json");
+            string roamingFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "EstimateApp", "data.json");
+
+            if (File.Exists(appDirFile) && !File.Exists(_filePath))
+            {
+                File.Copy(appDirFile, _filePath, true);
+            }
+            else if (File.Exists(roamingFile) && !File.Exists(_filePath))
+            {
+                File.Copy(roamingFile, _filePath, true);
+            }
+        }
+        catch { /* Ігноруємо помилки міграції */ }
     }
 
     public void SaveData(AppData data)

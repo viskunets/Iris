@@ -24,6 +24,8 @@ public class ExportMetadata
 
 public class ExportService
 {
+    private byte[]? _cachedDefaultLogo;
+
     static ExportService()
     {
         QuestPDF.Settings.License = LicenseType.Community;
@@ -46,9 +48,10 @@ public class ExportService
                 page.Header().Column(headerCol =>
                 {
                     // КАРТИНКА ХЕДЕРА
-                    if (!string.IsNullOrEmpty(meta.HeaderImagePath) && File.Exists(meta.HeaderImagePath))
+                    var logoBytes = GetLogoBytes(meta.HeaderImagePath);
+                    if (logoBytes != null)
                     {
-                        headerCol.Item().AlignCenter().MaxHeight(80).Image(meta.HeaderImagePath, ImageScaling.FitArea);
+                        headerCol.Item().AlignCenter().MaxHeight(80).Image(logoBytes, ImageScaling.FitArea);
                     }
 
                     headerCol.Item().PaddingTop(10).Row(row =>
@@ -143,9 +146,11 @@ public class ExportService
         int currentRow = 1;
 
         // КАРТИНКА (приблизно)
-        if (!string.IsNullOrEmpty(meta.HeaderImagePath) && File.Exists(meta.HeaderImagePath))
+        var logoBytes = GetLogoBytes(meta.HeaderImagePath);
+        if (logoBytes != null)
         {
-            var picture = ws.AddPicture(meta.HeaderImagePath)
+            using var ms = new MemoryStream(logoBytes);
+            var picture = ws.AddPicture(ms)
                 .MoveTo(ws.Cell(currentRow, 1))
                 .WithPlacement(XLPicturePlacement.FreeFloating);
             picture.Height = 80;
@@ -223,5 +228,33 @@ public class ExportService
         ws.Columns().AdjustToContents();
         ws.Column(1).Width = 50; // Назва може бути довгою
         workbook.SaveAs(filePath);
+    }
+
+    private byte[]? GetLogoBytes(string customPath)
+    {
+        // 1. Спробувати завантажити зовнішній файл
+        if (!string.IsNullOrEmpty(customPath) && File.Exists(customPath))
+        {
+            try { return File.ReadAllBytes(customPath); } catch { }
+        }
+
+        // 2. Повернути вбудований логотип
+        if (_cachedDefaultLogo == null)
+        {
+            try
+            {
+                var uri = new Uri("pack://application:,,,/Iris;component/maxeffectshow.jpg");
+                var info = System.Windows.Application.GetResourceStream(uri);
+                if (info != null)
+                {
+                    using var ms = new MemoryStream();
+                    info.Stream.CopyTo(ms);
+                    _cachedDefaultLogo = ms.ToArray();
+                }
+            }
+            catch { }
+        }
+
+        return _cachedDefaultLogo;
     }
 }

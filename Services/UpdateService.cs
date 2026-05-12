@@ -12,7 +12,7 @@ public class UpdateService
     private const string VersionUrl = "https://raw.githubusercontent.com/viskunets/Iris/master/version.txt";
     private const string DownloadUrl = "https://github.com/viskunets/Iris/releases/latest/download/Iris.zip";
 
-    public string CurrentVersion => "4.5.2";
+    public string CurrentVersion => "4.5.3";
 
     public async Task<(bool canUpdate, string newVersion)> CheckForUpdatesAsync()
     {
@@ -52,6 +52,7 @@ public class UpdateService
 @echo off
 timeout /t 2 /nobreak > nul
 xcopy /y /s /e ""{tempDir}\*"" ""{currentDir}""
+rd /s /q ""{tempDir}""
 start """" ""{Path.Combine(currentDir, "Iris.exe")}""
 del ""%~f0""
 ";

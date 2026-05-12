@@ -38,7 +38,7 @@ public partial class MainViewModel : ObservableObject
     private readonly PersistenceService _persistenceService = new();
     
     [ObservableProperty] private string _calculationName = "Новий розрахунок";
-    [ObservableProperty] private string _appVersion = "v4.5.2";
+    [ObservableProperty] private string _appVersion = "v4.5.3";
     [ObservableProperty] private decimal _grandTotal;
     [ObservableProperty] private decimal _vatRatePercent = 20;
     [ObservableProperty] private bool _isDarkTheme = false;

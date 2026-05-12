@@ -21,6 +21,16 @@ public class SavedCalculation
     public decimal GrandTotal { get; set; }
 }
 
+public partial class CategoryFilterItem : ObservableObject
+{
+    [ObservableProperty] private string _name = string.Empty;
+    [ObservableProperty] private bool _isSelected = true;
+    
+    // Подія для сповіщення ViewModel про зміну фільтру
+    public event Action? OnFilterChanged;
+    partial void OnIsSelectedChanged(bool value) => OnFilterChanged?.Invoke();
+}
+
 public partial class MainViewModel : ObservableObject
 {
     private readonly ExportService _exportService = new();
@@ -28,18 +38,40 @@ public partial class MainViewModel : ObservableObject
     private readonly PersistenceService _persistenceService = new();
     
     [ObservableProperty] private string _calculationName = "Новий розрахунок";
-    [ObservableProperty] private string _appVersion = "v4.5.1";
+    [ObservableProperty] private string _appVersion = "v4.5.2";
     [ObservableProperty] private decimal _grandTotal;
     [ObservableProperty] private decimal _vatRatePercent = 20;
     [ObservableProperty] private bool _isDarkTheme = false;
     [ObservableProperty] private int _selectedTabIndex = 0;
     [ObservableProperty] private bool _isMenuOpen = false;
     [ObservableProperty] private string _searchText = string.Empty;
+    [ObservableProperty] private string _searchTextDatabase = string.Empty;
+    public ObservableCollection<CategoryFilterItem> CategoryFilters { get; } = new();
+
+    // Налаштування експорту
+    [ObservableProperty] private string _companyWebsite = string.Empty;
+    [ObservableProperty] private string _authorName = string.Empty;
+    [ObservableProperty] private string _authorPhone = string.Empty;
+    [ObservableProperty] private string _authorEmail = string.Empty;
+    [ObservableProperty] private string _headerImagePath = "maxeffectshow.jpg";
+    [ObservableProperty] private bool _autoDate = true;
+
+    // Параметри діалогу експорту
+    [ObservableProperty] private DateTime _exportDate = DateTime.Now;
+    [ObservableProperty] private string _exportAuthorName = string.Empty;
+    [ObservableProperty] private string _exportAuthorPhone = string.Empty;
+    [ObservableProperty] private string _exportAuthorEmail = string.Empty;
+    [ObservableProperty] private string _exportWebsite = string.Empty;
+    [ObservableProperty] private string _exportClientName = string.Empty;
+    private string _targetExportPath = string.Empty;
+    private int _targetExportType = 0; // 0 - PDF, 1 - Excel
+    private IEnumerable<EstimateItem> _exportItems = Enumerable.Empty<EstimateItem>();
+    private decimal _exportTotal;
 
     // Для діалогів
     [ObservableProperty] private string _newProjectName = string.Empty;
     [ObservableProperty] private bool _isDialogOpen = false;
-    [ObservableProperty] private int _dialogState = 0; 
+    [ObservableProperty] private int _dialogState = 0; // 0: New, 1: Confirm, 2: Export
 
     public SnackbarMessageQueue MessageQueue { get; } = new(TimeSpan.FromSeconds(3));
 
@@ -55,6 +87,7 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<EstimateItem> Catalog { get; } = new();
     public System.ComponentModel.ICollectionView CatalogView { get; }
+    public System.ComponentModel.ICollectionView DatabaseCatalogView { get; }
     public ObservableCollection<SavedCalculation> History { get; } = new();
 
     public MainViewModel()
@@ -65,6 +98,10 @@ public partial class MainViewModel : ObservableObject
             var item = (EstimateItem)o;
             return item.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase) || item.Category.Contains(SearchText, StringComparison.OrdinalIgnoreCase);
         };
+
+        DatabaseCatalogView = System.Windows.Data.CollectionViewSource.GetDefaultView(new ObservableCollection<EstimateItem>()); // Temporary
+        DatabaseCatalogView = System.Windows.Data.CollectionViewSource.GetDefaultView(Catalog);
+        DatabaseCatalogView.Filter = FilterDatabase;
 
         // ЗАВАНТАЖЕННЯ ДАНИХ
         var data = _persistenceService.LoadData();
@@ -81,6 +118,15 @@ public partial class MainViewModel : ObservableObject
 
         foreach (var item in data.Catalog) AddToCatalogInternal(item);
         foreach (var calc in data.History) History.Add(calc);
+
+        CompanyWebsite = data.CompanyWebsite;
+        AuthorName = data.AuthorName;
+        AuthorPhone = data.AuthorPhone;
+        AuthorEmail = data.AuthorEmail;
+        HeaderImagePath = data.HeaderImagePath;
+        AutoDate = data.AutoDate;
+
+        UpdateCategoryFilters();
 
         // Якщо база порожня, додаємо демо-дані
         if (!Catalog.Any())
@@ -100,9 +146,56 @@ public partial class MainViewModel : ObservableObject
         item.IsSelected = false; // Завжди знімаємо вибір при старті
         item.PropertyChanged += (s, args) => { 
             if (args.PropertyName == nameof(EstimateItem.IsSelected) || args.PropertyName == nameof(EstimateItem.Total)) UpdateGrandTotal(); 
+            if (args.PropertyName == nameof(EstimateItem.Category)) UpdateCategoryFilters();
             SaveAll(); 
         };
         Catalog.Add(item);
+        UpdateCategoryFilters();
+    }
+
+    private bool _isUpdatingFilters = false;
+    private void UpdateCategoryFilters()
+    {
+        if (_isUpdatingFilters) return;
+        _isUpdatingFilters = true;
+
+        var currentCategories = Catalog.Select(i => i.Category).Distinct().OrderBy(c => c).ToList();
+        
+        // Видаляємо старі, яких більше немає
+        var toRemove = CategoryFilters.Where(f => !currentCategories.Contains(f.Name)).ToList();
+        foreach (var f in toRemove) CategoryFilters.Remove(f);
+
+        // Додаємо нові
+        foreach (var cat in currentCategories)
+        {
+            if (!CategoryFilters.Any(f => f.Name == cat))
+            {
+                var newItem = new CategoryFilterItem { Name = cat, IsSelected = true };
+                newItem.OnFilterChanged += () => CatalogView.Refresh();
+                CategoryFilters.Add(newItem);
+            }
+        }
+
+        _isUpdatingFilters = false;
+        DatabaseCatalogView.Refresh();
+    }
+
+    private bool FilterDatabase(object o)
+    {
+        var item = (EstimateItem)o;
+        
+        // Пошук за текстом
+        bool matchesSearch = string.IsNullOrWhiteSpace(SearchTextDatabase) || 
+                             item.Name.Contains(SearchTextDatabase, StringComparison.OrdinalIgnoreCase) || 
+                             item.Category.Contains(SearchTextDatabase, StringComparison.OrdinalIgnoreCase);
+        
+        if (!matchesSearch) return false;
+
+        // Пошук за категоріями (якщо вибрано хоч одну)
+        var selectedCats = CategoryFilters.Where(f => f.IsSelected).Select(f => f.Name).ToList();
+        if (!selectedCats.Any()) return true; // Якщо нічого не вибрано, показуємо все? Або нічого? Зазвичай показують все, якщо фільтр не активний, але тут "ставити галочки", тож якщо галочки є - то фільтруємо.
+        
+        return selectedCats.Contains(item.Category);
     }
 
     private void SaveAll()
@@ -119,7 +212,13 @@ public partial class MainViewModel : ObservableObject
             WindowHeight = WinHeight,
             WindowTop = WinTop,
             WindowLeft = WinLeft,
-            IsMaximized = WinState == WindowState.Maximized
+            IsMaximized = WinState == WindowState.Maximized,
+            CompanyWebsite = CompanyWebsite,
+            AuthorName = AuthorName,
+            AuthorPhone = AuthorPhone,
+            AuthorEmail = AuthorEmail,
+            HeaderImagePath = HeaderImagePath,
+            AutoDate = AutoDate
         };
         _persistenceService.SaveData(data);
     }
@@ -150,10 +249,15 @@ public partial class MainViewModel : ObservableObject
         SaveAll();
     }
 
-    [RelayCommand] private void AddToCatalog() => AddToCatalogInternal(new EstimateItem { Name = "Нова позиція", Price = 0, Category = "Загальне" });
-    [RelayCommand] private void RemoveFromCatalog(EstimateItem item) { if (item != null) Catalog.Remove(item); }
+    [RelayCommand] private void CancelDialog() => IsDialogOpen = false;
+
+    [RelayCommand] private void AddToCatalog() => AddToCatalogInternal(new EstimateItem { Name = "Нова позиція", Price = 0, Category = "Загальне", CreatedAt = DateTime.Now });
+    [RelayCommand] private void RemoveFromCatalog(EstimateItem item) { if (item != null) { Catalog.Remove(item); UpdateCategoryFilters(); } }
     [RelayCommand] private void ResetSearch() => SearchText = string.Empty;
+    [RelayCommand] private void ResetSearchDatabase() => SearchTextDatabase = string.Empty;
+
     partial void OnSearchTextChanged(string value) => CatalogView.Refresh();
+    partial void OnSearchTextDatabaseChanged(string value) => DatabaseCatalogView.Refresh();
 
     [RelayCommand]
     private void SaveEstimate()
@@ -170,18 +274,74 @@ public partial class MainViewModel : ObservableObject
     private void ExportPdf()
     {
         var selectedItems = Catalog.Where(i => i.IsSelected).ToList();
-        if (!selectedItems.Any()) return;
+        if (!selectedItems.Any()) { MessageQueue.Enqueue("Помилка: Не вибрано товарів!"); return; }
+        
         var sfd = new Microsoft.Win32.SaveFileDialog { Filter = "PDF Files (*.pdf)|*.pdf", FileName = $"{CalculationName}.pdf" };
-        if (sfd.ShowDialog() == true) _exportService.GeneratePdf(sfd.FileName, selectedItems, GrandTotal);
+        if (sfd.ShowDialog() == true) 
+        {
+            PrepareExport(selectedItems, GrandTotal, sfd.FileName, 0);
+        }
     }
 
     [RelayCommand]
     private void ExportExcel()
     {
         var selectedItems = Catalog.Where(i => i.IsSelected).ToList();
-        if (!selectedItems.Any()) return;
+        if (!selectedItems.Any()) { MessageQueue.Enqueue("Помилка: Не вибрано товарів!"); return; }
+        
         var sfd = new Microsoft.Win32.SaveFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx", FileName = $"{CalculationName}.xlsx" };
-        if (sfd.ShowDialog() == true) _exportService.ExportToExcel(sfd.FileName, selectedItems, GrandTotal);
+        if (sfd.ShowDialog() == true) 
+        {
+            PrepareExport(selectedItems, GrandTotal, sfd.FileName, 1);
+        }
+    }
+
+    private void PrepareExport(IEnumerable<EstimateItem> items, decimal total, string filePath, int type)
+    {
+        _exportItems = items;
+        _exportTotal = total;
+        _targetExportPath = filePath;
+        _targetExportType = type;
+
+        ExportDate = DateTime.Now;
+        ExportAuthorName = AuthorName;
+        ExportAuthorPhone = AuthorPhone;
+        ExportAuthorEmail = AuthorEmail;
+        ExportWebsite = CompanyWebsite;
+        ExportClientName = CalculationName;
+
+        DialogState = 2;
+        IsDialogOpen = true;
+    }
+
+    [RelayCommand]
+    private void ConfirmExport()
+    {
+        IsDialogOpen = false;
+        var metadata = new ExportMetadata
+        {
+            Date = ExportDate,
+            AuthorName = ExportAuthorName,
+            AuthorPhone = ExportAuthorPhone,
+            AuthorEmail = ExportAuthorEmail,
+            Website = ExportWebsite,
+            ClientName = ExportClientName,
+            HeaderImagePath = HeaderImagePath
+        };
+
+        try
+        {
+            if (_targetExportType == 0)
+                _exportService.GeneratePdf(_targetExportPath, _exportItems, _exportTotal, metadata);
+            else
+                _exportService.ExportToExcel(_targetExportPath, _exportItems, _exportTotal, metadata);
+            
+            MessageQueue.Enqueue("✅ Файл успішно збережено!");
+        }
+        catch (Exception ex)
+        {
+            MessageQueue.Enqueue($"❌ Помилка експорту: {ex.Message}");
+        }
     }
 
     [RelayCommand]
@@ -199,7 +359,17 @@ public partial class MainViewModel : ObservableObject
         MessageQueue.Enqueue($"Завантажено: {CalculationName}");
     }
 
-    [RelayCommand] private void ExportHistoryPdf(SavedCalculation calc) => _exportService.GeneratePdf("temp.pdf", calc.Items, calc.GrandTotal);
+    [RelayCommand] private void ExportHistoryPdf(SavedCalculation calc) 
+    {
+        var sfd = new Microsoft.Win32.SaveFileDialog { Filter = "PDF Files (*.pdf)|*.pdf", FileName = $"{calc.Name}.pdf" };
+        if (sfd.ShowDialog() == true) PrepareExport(calc.Items, calc.GrandTotal, sfd.FileName, 0);
+    }
+    
+    [RelayCommand] private void ExportHistoryExcel(SavedCalculation calc)
+    {
+        var sfd = new Microsoft.Win32.SaveFileDialog { Filter = "Excel Files (*.xlsx)|*.xlsx", FileName = $"{calc.Name}.xlsx" };
+        if (sfd.ShowDialog() == true) PrepareExport(calc.Items, calc.GrandTotal, sfd.FileName, 1);
+    }
     [RelayCommand] private void RemoveHistory(SavedCalculation calc) { if (calc != null) History.Remove(calc); MessageQueue.Enqueue("Запис видалено"); }
 
     [RelayCommand]
@@ -239,6 +409,12 @@ public partial class MainViewModel : ObservableObject
     partial void OnHeaderColorChanged(string value) => SaveAll();
     partial void OnFooterColorChanged(string value) => SaveAll();
     partial void OnVatRatePercentChanged(decimal value) => SaveAll();
+    partial void OnCompanyWebsiteChanged(string value) => SaveAll();
+    partial void OnAuthorNameChanged(string value) => SaveAll();
+    partial void OnAuthorPhoneChanged(string value) => SaveAll();
+    partial void OnAuthorEmailChanged(string value) => SaveAll();
+    partial void OnHeaderImagePathChanged(string value) => SaveAll();
+    partial void OnAutoDateChanged(bool value) => SaveAll();
     partial void OnSelectedTabIndexChanged(int value) => IsMenuOpen = false;
 
     partial void OnWinWidthChanged(double value) => SaveAll();

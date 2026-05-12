@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using EstimateApp.Models;
@@ -5,8 +7,20 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using ClosedXML.Excel;
+using ClosedXML.Excel.Drawings;
 
 namespace EstimateApp.Services;
+
+public class ExportMetadata
+{
+    public DateTime Date { get; set; } = DateTime.Now;
+    public string AuthorName { get; set; } = "";
+    public string AuthorPhone { get; set; } = "";
+    public string AuthorEmail { get; set; } = "";
+    public string Website { get; set; } = "";
+    public string ClientName { get; set; } = "";
+    public string HeaderImagePath { get; set; } = "";
+}
 
 public class ExportService
 {
@@ -15,9 +29,8 @@ public class ExportService
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
-    public void GeneratePdf(string filePath, IEnumerable<EstimateItem> items, decimal grandTotal)
+    public void GeneratePdf(string filePath, IEnumerable<EstimateItem> items, decimal grandTotal, ExportMetadata meta)
     {
-        // Групуємо та сортуємо
         var groupedItems = items
             .OrderBy(i => i.Category)
             .ThenBy(i => i.Name)
@@ -27,19 +40,39 @@ public class ExportService
         {
             container.Page(page =>
             {
-                page.Margin(50);
+                page.Margin(40);
                 page.DefaultTextStyle(x => x.FontFamily("Arial").FontSize(11));
 
-                page.Header().Row(row =>
+                page.Header().Column(headerCol =>
                 {
-                    row.RelativeItem().Column(col =>
+                    // КАРТИНКА ХЕДЕРА
+                    if (!string.IsNullOrEmpty(meta.HeaderImagePath) && File.Exists(meta.HeaderImagePath))
                     {
-                        col.Item().Text("ТЕХНІЧНИЙ РОЗРАХУНОК").FontSize(24).SemiBold().FontColor(Colors.Blue.Medium);
-                        col.Item().Text($"{System.DateTime.Now:dd.MM.yyyy HH:mm}").FontSize(10).Italic();
+                        headerCol.Item().AlignCenter().MaxHeight(80).Image(meta.HeaderImagePath, ImageScaling.FitArea);
+                    }
+
+                    headerCol.Item().PaddingTop(10).Row(row =>
+                    {
+                        // ЛІВА ЧАСТИНА: Клієнт та Пропозиція
+                        row.RelativeItem().Column(col =>
+                        {
+                            col.Item().PaddingTop(5).Text(meta.ClientName).FontSize(14).Bold();
+                            col.Item().Text("Пропозиція").FontSize(12).SemiBold().FontColor(Colors.Grey.Medium);
+                            col.Item().Text($"{meta.Date:dd MMMM yyyy}").FontSize(11);
+                        });
+
+                        // ПРАВА ЧАСТИНА: Контакти автора
+                        row.RelativeItem().AlignRight().Column(col =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(meta.Website)) col.Item().Text(meta.Website).FontColor(Colors.Grey.Medium);
+                            if (!string.IsNullOrWhiteSpace(meta.AuthorName)) col.Item().Text(meta.AuthorName).Bold();
+                            if (!string.IsNullOrWhiteSpace(meta.AuthorPhone)) col.Item().Text(meta.AuthorPhone);
+                            if (!string.IsNullOrWhiteSpace(meta.AuthorEmail)) col.Item().Text(meta.AuthorEmail);
+                        });
                     });
                 });
 
-                page.Content().PaddingVertical(20).Column(column =>
+                page.Content().PaddingVertical(15).Column(column =>
                 {
                     column.Item().Table(table =>
                     {
@@ -53,10 +86,10 @@ public class ExportService
 
                         table.Header(header =>
                         {
-                            header.Cell().Element(HeaderStyle).Text("Найменування / Категорія");
-                            header.Cell().Element(HeaderStyle).Text("К-сть");
-                            header.Cell().Element(HeaderStyle).Text("Ціна");
-                            header.Cell().Element(HeaderStyle).Text("Всього");
+                            header.Cell().Element(HeaderStyle).Text("Найменування");
+                            header.Cell().Element(HeaderStyle).AlignCenter().Text("К-сть");
+                            header.Cell().Element(HeaderStyle).AlignRight().Text("Ціна");
+                            header.Cell().Element(HeaderStyle).AlignRight().Text("Сума");
 
                             static IContainer HeaderStyle(IContainer container) => 
                                 container.DefaultTextStyle(x => x.SemiBold()).PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Black);
@@ -64,35 +97,40 @@ public class ExportService
 
                         foreach (var group in groupedItems)
                         {
-                            // Рядок категорії
-                            table.Cell().ColumnSpan(4).Background(Colors.Grey.Lighten3).Padding(5).Text(group.Key).FontSize(12).Bold();
+                            table.Cell().ColumnSpan(4).Background(Colors.Grey.Lighten3).Padding(5).Text(group.Key).FontSize(11).Bold();
 
                             foreach (var item in group)
                             {
-                                table.Cell().Element(CellStyle).PaddingLeft(10).Text(item.Name);
-                                table.Cell().Element(CellStyle).Text($"{item.Factor} шт.");
-                                table.Cell().Element(CellStyle).Text($"{item.Price:N2}");
-                                table.Cell().Element(CellStyle).Text($"{item.Total:N2}");
+                                table.Cell().Element(CellStyle).PaddingLeft(5).Text(item.Name);
+                                table.Cell().Element(CellStyle).AlignCenter().Text($"{item.Factor} шт.");
+                                table.Cell().Element(CellStyle).AlignRight().Text($"{item.Price:N2} ₴");
+                                table.Cell().Element(CellStyle).AlignRight().Text($"{item.Total:N2} ₴");
 
                                 static IContainer CellStyle(IContainer container) => 
-                                    container.PaddingVertical(5).BorderBottom(1).BorderColor(Colors.Grey.Lighten4);
+                                    container.PaddingVertical(3).BorderBottom(1).BorderColor(Colors.Grey.Lighten4);
                             }
                         }
                     });
 
-                    // Підсумок ВІДРАЗУ під таблицею
-                    column.Item().PaddingTop(20).AlignRight().Column(col =>
+                    column.Item().PaddingTop(15).AlignRight().Column(col =>
                     {
-                        col.Item().Text("ЗАГАЛЬНА СУМА:").FontSize(12).SemiBold();
-                        col.Item().Text($"{grandTotal:N2} грн").FontSize(20).Bold().FontColor(Colors.Blue.Medium);
-                        col.Item().PaddingTop(5).Text("* Ціни з урахуванням ПДВ").FontSize(9).Italic();
+                        col.Item().Text(t => {
+                            t.Span("ЗАГАЛЬНА СУМА: ").FontSize(12).SemiBold();
+                            t.Span($"{grandTotal:N2} ₴").FontSize(18).Bold();
+                        });
+                        col.Item().PaddingTop(2).Text("* Ціни вказані у національній валюті").FontSize(8).Italic().FontColor(Colors.Grey.Medium);
                     });
+                });
+                
+                page.Footer().AlignCenter().Text(x => {
+                    x.Span("Стор. ");
+                    x.CurrentPageNumber();
                 });
             });
         }).GeneratePdf(filePath);
     }
 
-    public void ExportToExcel(string filePath, IEnumerable<EstimateItem> items, decimal grandTotal)
+    public void ExportToExcel(string filePath, IEnumerable<EstimateItem> items, decimal grandTotal, ExportMetadata meta)
     {
         var groupedItems = items
             .OrderBy(i => i.Category)
@@ -102,58 +140,88 @@ public class ExportService
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Розрахунок");
 
-        ws.Cell("A1").Value = "ТЕХНІЧНИЙ РОЗРАХУНОК ОБЛАДНАННЯ";
-        ws.Cell("A1").Style.Font.Bold = true;
-        ws.Cell("A1").Style.Font.FontSize = 18;
-        ws.Range("A1:D1").Merge();
+        int currentRow = 1;
 
-        int row = 3;
-        ws.Cell(row++, 1).Value = $"Сформовано: {System.DateTime.Now:dd.MM.yyyy HH:mm}";
-        row++;
+        // КАРТИНКА (приблизно)
+        if (!string.IsNullOrEmpty(meta.HeaderImagePath) && File.Exists(meta.HeaderImagePath))
+        {
+            var picture = ws.AddPicture(meta.HeaderImagePath)
+                .MoveTo(ws.Cell(currentRow, 1))
+                .WithPlacement(XLPicturePlacement.FreeFloating);
+            picture.Height = 80;
+            currentRow += 5;
+        }
+
+        // МЕТАДАНІ
+        ws.Cell(currentRow, 1).Value = meta.ClientName;
+        ws.Cell(currentRow, 1).Style.Font.Bold = true;
+        ws.Cell(currentRow, 1).Style.Font.FontSize = 14;
+
+        ws.Cell(currentRow, 4).Value = meta.Website;
+        ws.Cell(currentRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        currentRow++;
+
+        ws.Cell(currentRow, 1).Value = "Пропозиція";
+        ws.Cell(currentRow, 1).Style.Font.FontColor = XLColor.Gray;
+
+        ws.Cell(currentRow, 4).Value = meta.AuthorName;
+        ws.Cell(currentRow, 4).Style.Font.Bold = true;
+        ws.Cell(currentRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        currentRow++;
+
+        ws.Cell(currentRow, 1).Value = meta.Date.ToString("dd MMMM yyyy");
+
+        ws.Cell(currentRow, 4).Value = meta.AuthorPhone;
+        ws.Cell(currentRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        currentRow++;
+
+        ws.Cell(currentRow, 4).Value = meta.AuthorEmail;
+        ws.Cell(currentRow, 4).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+        currentRow += 2;
 
         // Headers
         var headers = new[] { "Найменування", "К-сть", "Ціна", "Сума" };
         for (int i = 0; i < headers.Length; i++)
         {
-            ws.Cell(row, i + 1).Value = headers[i];
-            ws.Cell(row, i + 1).Style.Font.Bold = true;
-            ws.Cell(row, i + 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#E3F2FD");
-            ws.Cell(row, i + 1).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            ws.Cell(currentRow, i + 1).Value = headers[i];
+            ws.Cell(currentRow, i + 1).Style.Font.Bold = true;
+            ws.Cell(currentRow, i + 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#F2F2F2");
+            ws.Cell(currentRow, i + 1).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
         }
-        row++;
+        currentRow++;
 
         foreach (var group in groupedItems)
         {
             // Category Header
-            var catCell = ws.Cell(row, 1);
-            catCell.Value = group.Key;
-            catCell.Style.Font.Bold = true;
-            catCell.Style.Fill.BackgroundColor = XLColor.FromHtml("#F5F5F5");
-            ws.Range(row, 1, row, 4).Merge().Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-            row++;
+            ws.Cell(currentRow, 1).Value = group.Key;
+            ws.Cell(currentRow, 1).Style.Font.Bold = true;
+            ws.Cell(currentRow, 1).Style.Fill.BackgroundColor = XLColor.FromHtml("#FAFAFA");
+            ws.Range(currentRow, 1, currentRow, 4).Merge().Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            currentRow++;
 
             foreach (var item in group)
             {
-                ws.Cell(row, 1).Value = item.Name;
-                ws.Cell(row, 2).Value = item.Factor;
-                ws.Cell(row, 3).Value = item.Price;
-                ws.Cell(row, 4).Value = item.Total;
+                ws.Cell(currentRow, 1).Value = item.Name;
+                ws.Cell(currentRow, 2).Value = item.Factor;
+                ws.Cell(currentRow, 3).Value = item.Price;
+                ws.Cell(currentRow, 4).Value = item.Total;
                 
-                ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0.00";
-                ws.Cell(row, 4).Style.NumberFormat.Format = "#,##0.00";
-                ws.Range(row, 1, row, 4).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-                row++;
+                ws.Cell(currentRow, 3).Style.NumberFormat.Format = "#,##0.00 \"₴\"";
+                ws.Cell(currentRow, 4).Style.NumberFormat.Format = "#,##0.00 \"₴\"";
+                ws.Range(currentRow, 1, currentRow, 4).Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                currentRow++;
             }
         }
 
-        row++;
-        ws.Cell(row, 3).Value = "ЗАГАЛЬНА СУМА:";
-        ws.Cell(row, 3).Style.Font.Bold = true;
-        ws.Cell(row, 4).Value = grandTotal;
-        ws.Cell(row, 4).Style.Font.Bold = true;
-        ws.Cell(row, 4).Style.NumberFormat.Format = "#,##0.00 \"грн\"";
+        currentRow++;
+        ws.Cell(currentRow, 3).Value = "ЗАГАЛЬНА СУМА:";
+        ws.Cell(currentRow, 3).Style.Font.Bold = true;
+        ws.Cell(currentRow, 4).Value = grandTotal;
+        ws.Cell(currentRow, 4).Style.Font.Bold = true;
+        ws.Cell(currentRow, 4).Style.NumberFormat.Format = "#,##0.00 \"₴\"";
 
         ws.Columns().AdjustToContents();
+        ws.Column(1).Width = 50; // Назва може бути довгою
         workbook.SaveAs(filePath);
     }
 }

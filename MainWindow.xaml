@@ -45,7 +45,7 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Button Content="ТАК" Command="{Binding SaveAndContinueCommand}" Style="{StaticResource MaterialDesignRaisedButton}" Width="80" Margin="0,0,8,0"/>
                         <Button Content="НІ" Command="{Binding SkipSaveAndContinueCommand}" Style="{StaticResource MaterialDesignFlatButton}" Width="80" Margin="0,0,8,0"/>
-                        <Button Content="СКАСУВАТИ" Command="{x:Static md:DialogHost.CloseDialogCommand}" Style="{StaticResource MaterialDesignFlatButton}"/>
+                        <Button Content="СКАСУВАТИ" Command="{Binding CancelDialogCommand}" Style="{StaticResource MaterialDesignFlatButton}"/>
                     </StackPanel>
                 </StackPanel>
 
@@ -55,8 +55,32 @@
                     <TextBlock Text="НОВИЙ ПРОЕКТ" Style="{StaticResource MaterialDesignHeadline6TextBlock}" HorizontalAlignment="Center" Margin="0,16,0,16"/>
                     <TextBox Text="{Binding NewProjectName, UpdateSourceTrigger=PropertyChanged}" md:HintAssist.Hint="Назва проекту" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,24"/>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button Content="СКАСУВАТИ" Command="{x:Static md:DialogHost.CloseDialogCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,8,0"/>
+                        <Button Content="СКАСУВАТИ" Command="{Binding CancelDialogCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,8,0"/>
                         <Button Content="СТВОРИТИ" Command="{Binding ConfirmNewProjectCommand}" Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- STATE 2: EXPORT SETTINGS -->
+                <StackPanel Visibility="{Binding DialogState, Converter={StaticResource IntToVis}, ConverterParameter=2}">
+                    <md:PackIcon Kind="FileExport" Width="48" Height="48" HorizontalAlignment="Center" Foreground="{DynamicResource MaterialDesignPrimaryBrush}"/>
+                    <TextBlock Text="НАЛАШТУВАННЯ ЕКСПОРТУ" Style="{StaticResource MaterialDesignHeadline6TextBlock}" HorizontalAlignment="Center" Margin="0,16,0,16"/>
+                    
+                    <ScrollViewer MaxHeight="400">
+                        <StackPanel>
+                            <DatePicker SelectedDate="{Binding ExportDate}" md:HintAssist.Hint="Дата в документі" Style="{StaticResource MaterialDesignOutlinedDatePicker}" Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding ExportClientName}" md:HintAssist.Hint="Назва проекту/Замовник" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                            
+                            <TextBlock Text="КОНТАКТНА ІНФОРМАЦІЯ" FontSize="10" FontWeight="Bold" Opacity="0.6" Margin="0,8,0,8"/>
+                            <TextBox Text="{Binding ExportAuthorName}" md:HintAssist.Hint="Прізвище та Ім'я" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding ExportAuthorPhone}" md:HintAssist.Hint="Телефон" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding ExportAuthorEmail}" md:HintAssist.Hint="Email" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                            <TextBox Text="{Binding ExportWebsite}" md:HintAssist.Hint="Сайт" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+                        <Button Content="СКАСУВАТИ" Command="{Binding CancelDialogCommand}" Style="{StaticResource MaterialDesignFlatButton}" Margin="0,0,8,0"/>
+                        <Button Content="ЕКСПОРТУВАТИ" Command="{Binding ConfirmExportCommand}" Style="{StaticResource MaterialDesignRaisedButton}"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
@@ -149,19 +173,51 @@
                     <!-- TAB 1: DATABASE -->
                     <TabItem>
                         <Grid Margin="20">
-                            <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                 <TextBlock Text="База Даних" Style="{StaticResource MaterialDesignHeadline5TextBlock}" VerticalAlignment="Center"/>
-                                <Button Command="{Binding AddToCatalogCommand}" Style="{StaticResource MaterialDesignFloatingActionButton}" Width="45" Height="45" Margin="20,0,0,0" Padding="0">
-                                    <md:PackIcon Kind="Plus" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Button Command="{Binding AddToCatalogCommand}" Style="{StaticResource MaterialDesignFloatingActionMiniButton}" Margin="16,0,0,0" ToolTip="Додати позицію">
+                                    <md:PackIcon Kind="Plus" Width="24" Height="24"/>
                                 </Button>
                             </StackPanel>
-                            <md:Card Grid.Row="1" md:ElevationAssist.Elevation="Dp2">
-                                <DataGrid ItemsSource="{Binding Catalog}" AutoGenerateColumns="False" CanUserAddRows="False" BorderThickness="0">
+
+                            <!-- SEARCH AND FILTERS -->
+                            <StackPanel Grid.Row="1" Margin="0,0,0,16">
+                                <md:ColorZone Mode="Standard" Padding="8,4" CornerRadius="8" md:ElevationAssist.Elevation="Dp2" Margin="0,0,0,12">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <md:PackIcon Kind="Magnify" Opacity=".5" VerticalAlignment="Center" Margin="8,0,16,0"/>
+                                        <TextBox Grid.Column="1" Text="{Binding SearchTextDatabase, UpdateSourceTrigger=PropertyChanged}" md:HintAssist.Hint="Пошук в базі..." md:TextFieldAssist.DecorationVisibility="Collapsed" BorderThickness="0" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="2" Style="{StaticResource MaterialDesignToolButton}" Command="{Binding ResetSearchDatabaseCommand}" Padding="0" Width="30" Height="30">
+                                            <md:PackIcon Kind="Close" Opacity=".5"/>
+                                        </Button>
+                                    </Grid>
+                                </md:ColorZone>
+                                
+                                <ItemsControl ItemsSource="{Binding CategoryFilters}">
+                                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,16,8" Style="{StaticResource MaterialDesignFilterChipPrimaryCheckBox}">
+                                                <TextBlock Text="{Binding Name}"/>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <md:Card Grid.Row="2" md:ElevationAssist.Elevation="Dp2">
+                                <DataGrid ItemsSource="{Binding DatabaseCatalogView}" AutoGenerateColumns="False" CanUserAddRows="False" BorderThickness="0">
                                     <DataGrid.Columns>
                                         <DataGridTextColumn Header="Категорія" Binding="{Binding Category}" Width="150"/>
                                         <DataGridTextColumn Header="Найменування" Binding="{Binding Name}" Width="*"/>
-                                        <DataGridTextColumn Header="Базова ціна" Binding="{Binding Price}" Width="150"/>
+                                        <DataGridTextColumn Header="Базова ціна" Binding="{Binding Price}" Width="120"/>
+                                        <DataGridTextColumn Header="Створено" Binding="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy}'}" IsReadOnly="True" Width="120"/>
                                         <DataGridTemplateColumn Width="70">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>
@@ -180,12 +236,58 @@
                     <!-- TAB 2: HISTORY -->
                     <TabItem>
                         <Grid Margin="20">
-                            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                            <TextBlock Text="Історія проектів" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,20"/>
-                            <ScrollViewer Grid.Row="1"><ItemsControl ItemsSource="{Binding History}"><ItemsControl.ItemTemplate><DataTemplate><md:Card Margin="0,0,0,10" Padding="15"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><Button Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding DataContext.LoadCalculationCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"><StackPanel><TextBlock Text="{Binding Name}" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource MaterialDesignPrimaryBrush}"/><TextBlock Text="{Binding Date, StringFormat='{}📅 {0:dd.MM.yyyy}  🕒 {0:HH:mm:ss}'}" FontSize="14" Opacity="0.9" Foreground="{DynamicResource MaterialDesignBody}" Margin="0,4,0,0"/><TextBlock Text="{Binding GrandTotal, StringFormat='{}{0:N2} грн'}" FontSize="18" FontWeight="Black" Margin="0,8,0,0" Foreground="{DynamicResource MaterialDesignBody}"/></StackPanel></Button><StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.ExportHistoryPdfCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"><md:PackIcon Kind="FilePdfBox" Foreground="#F44336" Width="28" Height="28"/></Button><Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.ExportHistoryExcelCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"><md:PackIcon Kind="FileExcel" Foreground="#217346" Width="28" Height="28"/></Button><Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.RemoveHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"><md:PackIcon Kind="Delete" Foreground="#9E9E9E" Width="28" Height="28"/></Button></StackPanel></Grid></md:Card></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <TextBlock Text="Історія проектів" Style="{StaticResource MaterialDesignHeadline5TextBlock}" Margin="0,0,0,20" />
+                            <ScrollViewer Grid.Row="1">
+                                <ItemsControl ItemsSource="{Binding History}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <md:Card Margin="0,0,0,12" Padding="16" md:ElevationAssist.Elevation="Dp2">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    
+                                                    <Button Style="{StaticResource MaterialDesignFlatButton}" 
+                                                            Command="{Binding DataContext.LoadCalculationCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                            CommandParameter="{Binding}" 
+                                                            HorizontalAlignment="Stretch" 
+                                                            HorizontalContentAlignment="Left"
+                                                            Padding="0" Height="Auto">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="Bold" Foreground="{DynamicResource MaterialDesignPrimaryBrush}"/>
+                                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                                <md:PackIcon Kind="CalendarClock" Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0" Opacity="0.6"/>
+                                                                <TextBlock Text="{Binding Date, StringFormat='{}{0:dd.MM.yyyy HH:mm:ss}'}" FontSize="13" Opacity="0.7"/>
+                                                                <TextBlock Text=" • " Margin="8,0" Opacity="0.4"/>
+                                                                <TextBlock Text="{Binding GrandTotal, StringFormat='{}{0:N2} грн'}" FontSize="14" FontWeight="SemiBold" Opacity="0.9"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Button>
+                                                    
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.ExportHistoryPdfCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" ToolTip="PDF">
+                                                            <md:PackIcon Kind="FilePdfBox" Foreground="#F44336" Width="26" Height="26"/>
+                                                        </Button>
+                                                        <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.ExportHistoryExcelCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" ToolTip="Excel">
+                                                            <md:PackIcon Kind="FileExcel" Foreground="#217346" Width="26" Height="26"/>
+                                                        </Button>
+                                                        <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding DataContext.RemoveHistoryCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" ToolTip="Видалити">
+                                                            <md:PackIcon Kind="Delete" Foreground="#9E9E9E" Width="26" Height="26"/>
+                                                        </Button>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </md:Card>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
                         </Grid>
                     </TabItem>
-
                     <!-- TAB 3: SETTINGS -->
                     <TabItem>
                         <Grid Margin="20">
@@ -200,6 +302,15 @@
                                         <Grid Margin="0,0,0,24"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions><TextBlock Text="Колір підсумку" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding FooterColor}" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:TextFieldAssist.PrefixText="#"/></Grid>
                                         <Separator Margin="0,0,0,24"/><TextBlock Text="ПОДАТКИ" FontWeight="Bold" Opacity="0.6" Margin="0,0,0,12"/>
                                         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions><TextBlock Text="Ставка ПДВ (%)" VerticalAlignment="Center"/><TextBox Grid.Column="1" Text="{Binding VatRatePercent}" Style="{StaticResource MaterialDesignOutlinedTextBox}" HorizontalContentAlignment="Center"/></Grid>
+                                        
+                                        <Separator Margin="0,24,0,24"/><TextBlock Text="ДАНІ ДЛЯ ЕКСПОРТУ" FontWeight="Bold" Opacity="0.6" Margin="0,0,0,16"/>
+                                        <TextBox Text="{Binding CompanyWebsite}" md:HintAssist.Hint="Сайт компанії" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                                        <TextBox Text="{Binding AuthorName}" md:HintAssist.Hint="Ім'я та Прізвище (Автор)" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                                        <TextBox Text="{Binding AuthorPhone}" md:HintAssist.Hint="Контактний телефон" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                                        <TextBox Text="{Binding AuthorEmail}" md:HintAssist.Hint="Email автора" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                                        <TextBox Text="{Binding HeaderImagePath}" md:HintAssist.Hint="Шлях до картинки хедеру" Style="{StaticResource MaterialDesignOutlinedTextBox}" Margin="0,0,0,16"/>
+                                        <DockPanel><TextBlock Text="Автоматична дата в ПДФ" VerticalAlignment="Center"/><ToggleButton IsChecked="{Binding AutoDate}" HorizontalAlignment="Right" Style="{StaticResource MaterialDesignSwitchToggleButton}"/></DockPanel>
+                                        
                                         <Separator Margin="0,24,0,24"/>
                                         <TextBlock Text="ПРО ПРОГРАМУ" FontWeight="Bold" Opacity="0.6" Margin="0,0,0,12"/>
                                         <DockPanel>

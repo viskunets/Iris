@@ -25,6 +25,9 @@ public partial class EstimateItem : ObservableObject
     [ObservableProperty]
     private bool _includeVat = true;
 
+    [ObservableProperty]
+    private System.DateTime _createdAt = System.DateTime.Now;
+
     public decimal VatAmount => IncludeVat ? Price * (decimal)Factor * VatRate : 0;
     public decimal Total => (Price * (decimal)Factor) + VatAmount;
 

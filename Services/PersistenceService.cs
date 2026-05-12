@@ -21,6 +21,14 @@ public class AppData
     public double WindowTop { get; set; } = 100;
     public double WindowLeft { get; set; } = 100;
     public bool IsMaximized { get; set; }
+
+    // НОВІ ПОЛЯ ДЛЯ ЕКСПОРТУ
+    public string CompanyWebsite { get; set; } = "";
+    public string AuthorName { get; set; } = "";
+    public string AuthorPhone { get; set; } = "";
+    public string AuthorEmail { get; set; } = "";
+    public string HeaderImagePath { get; set; } = "maxeffectshow.jpg";
+    public bool AutoDate { get; set; } = true;
 }
 
 public class PersistenceService

@@ -38,7 +38,7 @@ public partial class MainViewModel : ObservableObject
     private readonly PersistenceService _persistenceService = new();
     
     [ObservableProperty] private string _calculationName = "Новий розрахунок";
-    [ObservableProperty] private string _appVersion = "v4.5.4";
+    [ObservableProperty] private string _appVersion = "v4.5.6";
     [ObservableProperty] private decimal _grandTotal;
     [ObservableProperty] private decimal _vatRatePercent = 20;
     [ObservableProperty] private bool _isDarkTheme = false;
@@ -147,7 +147,7 @@ public partial class MainViewModel : ObservableObject
         item.PropertyChanged += (s, args) => { 
             if (args.PropertyName == nameof(EstimateItem.IsSelected) || args.PropertyName == nameof(EstimateItem.Total)) UpdateGrandTotal(); 
             if (args.PropertyName == nameof(EstimateItem.Category)) UpdateCategoryFilters();
-            SaveAll(); 
+            if (args.PropertyName != nameof(EstimateItem.IsSelected)) SaveAll(); 
         };
         Catalog.Add(item);
         UpdateCategoryFilters();

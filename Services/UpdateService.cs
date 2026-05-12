@@ -12,7 +12,7 @@ public class UpdateService
     private const string VersionUrl = "https://raw.githubusercontent.com/viskunets/Iris/master/version.txt";
     private const string DownloadUrl = "https://github.com/viskunets/Iris/releases/latest/download/Iris.zip";
 
-    public string CurrentVersion => "4.5.4";
+    public string CurrentVersion => "4.5.6";
 
     public async Task<(bool canUpdate, string newVersion)> CheckForUpdatesAsync()
     {
@@ -50,9 +50,12 @@ public class UpdateService
         logAction("Підготовка до перезапуску...");
         string batchContent = $@"
 @echo off
-timeout /t 2 /nobreak > nul
+title Оновлення Iris...
+timeout /t 3 /nobreak > nul
+echo Оновлення файлів...
 xcopy /y /s /e ""{tempDir}\*"" ""{currentDir}""
-rd /s /q ""{tempDir}""
+if exist ""{tempDir}"" rd /s /q ""{tempDir}""
+echo Оновлення завершено! Запуск програми...
 start """" ""{Path.Combine(currentDir, "Iris.exe")}""
 del ""%~f0""
 ";

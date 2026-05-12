@@ -214,9 +214,9 @@
                             <md:Card Grid.Row="2" md:ElevationAssist.Elevation="Dp2">
                                 <DataGrid ItemsSource="{Binding DatabaseCatalogView}" AutoGenerateColumns="False" CanUserAddRows="False" BorderThickness="0">
                                     <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Категорія" Binding="{Binding Category}" Width="150"/>
-                                        <DataGridTextColumn Header="Найменування" Binding="{Binding Name}" Width="*"/>
-                                        <DataGridTextColumn Header="Базова ціна" Binding="{Binding Price}" Width="120"/>
+                                        <DataGridTextColumn Header="Категорія" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="150"/>
+                                        <DataGridTextColumn Header="Найменування" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                        <DataGridTextColumn Header="Базова ціна" Binding="{Binding Price, UpdateSourceTrigger=PropertyChanged}" Width="120"/>
                                         <DataGridTextColumn Header="Створено" Binding="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy}'}" IsReadOnly="True" Width="120"/>
                                         <DataGridTemplateColumn Width="70">
                                             <DataGridTemplateColumn.CellTemplate>
